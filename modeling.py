@@ -28,7 +28,10 @@ from sklearn.tree import DecisionTreeClassifier
 
 RANDOM_STATE = 42
 TARGET = "is_canceled"
-DATA_PATH = Path(__file__).parent / "data" / "hotel_bookings.zip"
+DATA_DIR = Path(__file__).parent / "data"
+CSV_DATA_PATH = DATA_DIR / "hotel_bookings.csv"
+ZIP_DATA_PATH = DATA_DIR / "hotel_bookings.zip"
+DATA_PATH = CSV_DATA_PATH if CSV_DATA_PATH.is_file() else ZIP_DATA_PATH
 
 ENGINEERED_NUMERIC = ("total_nights", "total_guests", "arrival_month_num")
 ENGINEERED_CATEGORICAL = ("arrival_season", "lead_time_category")
@@ -99,8 +102,13 @@ def engineer_booking_features(raw_booking: dict[str, Any]) -> dict[str, Any]:
 
 
 def load_and_prepare_data(path: Path = DATA_PATH) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series]:
-    """Load the original CSV-in-ZIP and reproduce notebook cleaning and features."""
-    df = pd.read_csv(path, compression="zip")
+    """Load the original CSV or CSV-in-ZIP and reproduce notebook cleaning/features."""
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"Dataset not found at {path}. Add data/hotel_bookings.csv or "
+            "data/hotel_bookings.zip to the repository."
+        )
+    df = pd.read_csv(path, compression="infer")
     df = df.drop_duplicates().copy()
     df[TARGET] = pd.to_numeric(df[TARGET], errors="coerce")
     df = df[df[TARGET].isin([0, 1])].copy()
